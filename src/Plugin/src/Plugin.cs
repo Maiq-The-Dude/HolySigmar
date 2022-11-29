@@ -51,7 +51,7 @@ namespace Sigmar
 
 			if (self is FlintlockWeapon flintWepOG)
 			{
-				_leaderboardLock ??= LeaderboardAPI.GetLeaderboardDisableLock();
+				_leaderboardLock ??= LeaderboardAPI.LeaderboardDisabled.TakeLock();
 
 				var flintWepDuped = dupedGun.GetComponent<FlintlockWeapon>();
 
