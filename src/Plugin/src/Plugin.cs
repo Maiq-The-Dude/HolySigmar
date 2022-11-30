@@ -3,6 +3,7 @@ using FistVR;
 using Sodalite.Api;
 using System;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Sigmar
 {
@@ -16,6 +17,7 @@ namespace Sigmar
 		public void Awake()
 		{
 			Hook();
+			SceneManager.sceneLoaded += OnSceneLoaded;
 		}
 
 		private void OnDestroy()
@@ -38,6 +40,16 @@ namespace Sigmar
 			On.FistVR.FVRPhysicalObject.DuplicateFromSpawnLock -= FVRPhysicalObject_DuplicateFromSpawnLock;
 		}
 
+		private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+		{
+			if (_leaderboardLock != null)
+			{
+				Logger.LogDebug("Saltzpyre is no longer preventing TNH score submission");
+				_leaderboardLock?.Dispose();
+				_leaderboardLock = null;
+			}
+		}
+
 		private void FlintlockWeapon_Awake(On.FistVR.FlintlockWeapon.orig_Awake orig, FistVR.FlintlockWeapon self)
 		{
 			orig(self);
@@ -47,18 +59,22 @@ namespace Sigmar
 
 		private GameObject FVRPhysicalObject_DuplicateFromSpawnLock(On.FistVR.FVRPhysicalObject.orig_DuplicateFromSpawnLock orig, FistVR.FVRPhysicalObject self, FistVR.FVRViveHand hand)
 		{
-			var dupedGun = orig(self, hand);
+			var dupedItem = orig(self, hand);
 
 			if (self is FlintlockWeapon flintWepOG)
 			{
-				_leaderboardLock ??= LeaderboardAPI.LeaderboardDisabled.TakeLock();
+				// Disable scoring
+				if (_leaderboardLock == null)
+				{
+					Logger.LogDebug("Saltzpyre disables TNH score submission");
+					_leaderboardLock ??= LeaderboardAPI.LeaderboardDisabled.TakeLock();
+				}
 
-				var flintWepDuped = dupedGun.GetComponent<FlintlockWeapon>();
+				var flintWepDuped = dupedItem.GetComponent<FlintlockWeapon>();
 
 				// Flint
-				flintWepDuped.m_hasFlint = flintWepOG.m_hasFlint;
-				flintWepDuped.m_flintUses = flintWepOG.m_flintUses;
-				flintWepDuped.FState = flintWepOG.FState;
+				flintWepDuped.AddFlint(flintWepOG.m_flintUses);
+				flintWepDuped.SetFlintState(flintWepOG.FState);
 
 				// Hammer
 				if (flintWepOG.HammerState == FlintlockWeapon.HState.Fullcock)
@@ -68,15 +84,6 @@ namespace Sigmar
 				else if (flintWepOG.HammerState == FlintlockWeapon.HState.Halfcock)
 				{
 					flintWepDuped.MoveToHalfCock();
-				}
-
-				// Barrel
-				var barrelDuped = flintWepDuped.MuzzlePos.parent.GetComponent<FlintlockBarrel>();
-				var barrelOG = flintWepOG.MuzzlePos.parent.GetComponent<FlintlockBarrel>();
-
-				foreach (var loadedElementes in barrelOG.LoadedElements)
-				{
-					barrelDuped.LoadedElements.Add(loadedElementes);
 				}
 
 				// Screw/Holder
@@ -89,17 +96,31 @@ namespace Sigmar
 					var flashDuped = flintWepDuped.FlashPans[i];
 					var flashOG = flintWepOG.FlashPans[i];
 
+					// Grain
 					for (var j = 0; j < flashOG.numGrainsPowderOn; j++)
 					{
 						flashDuped.AddGrain();
 					}
 
-					flashDuped.FrizenState = flashOG.FrizenState;
-					flashDuped.Frizen.transform.rotation = flashOG.Frizen.transform.rotation;
+					// Barrels
+					for (var j = 0; j < flashDuped.Barrels.Count; j++)
+					{
+						flashDuped.Barrels[j].LoadedElements.AddRange(flashOG.Barrels[j].LoadedElements);
+					}
+
+					// Frizen
+					if (flashOG.FrizenState == FlintlockFlashPan.FState.Down)
+					{
+						flashDuped.SetFrizenDown();
+					}
+					else if (flashOG.FrizenState == FlintlockFlashPan.FState.Up)
+					{
+						flashDuped.SetFrizenUp();
+					}
 				}
 			}
 
-			return dupedGun;
+			return dupedItem;
 		}
 	}
 }
