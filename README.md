@@ -1,6 +1,6 @@
 # Holy Sigmar
 - Allows flintlock weapons to be spawnlocked
-- Disables leaderboard uploads for the remainder of a session when a flintlock is spawnlocked
+- Disables TNH leaderboard submission after a flintlock is spawned from spawnlocked. Reloading or changing the scene will re-enable TNH leaderboard submission
 
 ## Manual Installation
 Requires
