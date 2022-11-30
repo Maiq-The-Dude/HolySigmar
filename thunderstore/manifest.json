@@ -2,7 +2,7 @@
     "name": "Holy Sigmar",
     "version_number": "1.0.0",
     "dependencies": [
-        "nrgill28-Sodalite-1.0.0"
+        "nrgill28-Sodalite-1.4.0"
     ],
     "description": "Allows spawnlockable flintlocks. Bless this ravaged body.",
     "website_url": "https://github.com/Maiq-The-Dude/HolySigmar"
